@@ -1,10 +1,11 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import { pool } from "./db.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { encrypt, decrypt } from "./crypto.js";
+
+import { pool } from "../db/db.js";
+import { encrypt, decrypt } from "../security/crypto.js";
 
 dotenv.config();
 
@@ -18,7 +19,7 @@ function requireAuth(req, res, next) {
   if (!authHeader) return res.status(401).json({ error: "Missing token" });
 
   const token = authHeader.split(" ")[1];
-  
+
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = decoded;

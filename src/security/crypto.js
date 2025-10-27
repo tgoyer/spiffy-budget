@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import dotenv from "dotenv";
+
 dotenv.config();
 
 const SECRET_KEY = crypto.createHash('sha256').update(process.env.JWT_SECRET).digest();
