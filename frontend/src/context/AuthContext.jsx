@@ -1,51 +1,27 @@
-import { createContext, useContext, useState, useEffect } from "react";
-import { apiFetch } from "../api/api";
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { getMe } from '../api/api.js';
 
-const AuthContext = createContext(null);
+const AuthContext = createContext();
 
-export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+export const AuthProvider = ({ children }) => {
+    const [user, setUser] = useState(null);
+    const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function fetchSession() {
-      try {
-        const data = await apiFetch("/sessions/me");
-        setUser(data.user);
-      } catch {
-        setUser(null);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchSession();
-  }, []);
+    useEffect(() => {
+        async function fetchUser() {
+            try {
+                const data = await getMe(); // fetch /me endpoint from backend
+                setUser(data.user);
+            } catch {
+                setUser(null);
+            } finally {
+                setLoading(false);
+            }
+        }
+        fetchUser();
+    }, []);
 
-  async function signup({ email, password, name, family_id }) {
-    const data = await apiFetch("/users", {
-      method: "POST",
-      body: JSON.stringify({ email, password, name, family_id }),
-    });
-    return data;
-  }
+    return <AuthContext.Provider value={{ user, setUser, loading }}>{children}</AuthContext.Provider>;
+};
 
-  async function login({ email, password }) {
-    const data = await apiFetch("/sessions", {
-      method: "POST",
-      body: JSON.stringify({ email, password }),
-    });
-    setUser(data.user);
-  }
-
-  async function logout() {
-    await apiFetch("/sessions", { method: "DELETE" });
-    setUser(null);
-  }
-
-  const value = { user, loading, login, signup, logout };
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
-
-export function useAuth() {
-  return useContext(AuthContext);
-}
+export const useAuth = () => useContext(AuthContext);

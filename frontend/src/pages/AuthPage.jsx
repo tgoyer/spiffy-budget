@@ -1,82 +1,132 @@
-import { useState } from "react";
-import { useAuth } from "../context/AuthContext";
-import styles from "./AuthPage.module.css";
+import { useState, useEffect } from 'react';
+import { useNavigate } from '@tanstack/react-router';
+import { createRoute } from '@tanstack/react-router';
 
-export default function AuthPage() {
-  const { login, signup } = useAuth();
-  const [isLogin, setIsLogin] = useState(true);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
-  const [familyId, setFamilyId] = useState(1); // default family id
-  const [error, setError] = useState("");
+import { login, register as registerUser } from '../api/api.js';
+import { useAuth } from '../context/AuthContext.jsx';
 
-  async function handleSubmit(e) {
-    e.preventDefault();
-    try {
-      setError("");
-      if (isLogin) {
-        await login({ email, password });
-      } else {
-        await signup({ email, password, name, family_id: familyId });
-        await login({ email, password });
-      }
-    } catch (err) {
-      setError(err.message || "Something went wrong");
-    }
-  }
+export const loginRoute = (root) =>
+    createRoute({
+        getParentRoute: () => root,
+        path: 'login',
+        component: () => <AuthPage />,
+    });
 
-  return (
-    <div className={styles.container}>
-      <div className={styles.card}>
-        <h2>{isLogin ? "Login" : "Sign Up"}</h2>
-        <form onSubmit={handleSubmit} className={styles.form}>
-          {!isLogin && (
-            <>
-              <input
-                type="text"
-                placeholder="Name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+function AuthPage() {
+    const { user, setUser } = useAuth();
+    const navigate = useNavigate();
+
+    const [mode, setMode] = useState('login'); // 'login' | 'register'
+    const [email, setEmail] = useState('');
+    const [name, setName] = useState('');
+    const [familyId, setFamilyId] = useState('');
+    const [password, setPassword] = useState('');
+    const [confirm, setConfirm] = useState('');
+
+    // Redirect if already logged in
+    useEffect(() => {
+        if (user) {
+            navigate({ to: '/' });
+        }
+    }, [user, navigate]);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+
+        try {
+            if (mode === 'login') {
+                const loggedInUser = await login({ email, password });
+                setUser(loggedInUser);
+                navigate({ to: '/' });
+            } else {
+                if (password !== confirm) {
+                    alert('Passwords do not match');
+                    return;
+                }
+                if (isNaN(Number(familyId))) {
+                    alert('Family ID must be a number');
+                    return;
+                }
+                const createdUser = await registerUser({ email, name, familyId: Number(familyId), password });
+                setUser(createdUser);
+                navigate({ to: '/' });
+            }
+        } catch (err) {
+            alert(mode === 'login' ? 'Login failed' : 'Account creation failed');
+        }
+    };
+
+    return (
+        <form onSubmit={handleSubmit}>
+            <h2>{mode === 'login' ? 'Login' : 'Create Account'}</h2>
+
+            {mode === 'register' && (
+                <>
+                    <input
+                        type="text"
+                        placeholder="Full Name"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        required
+                    />
+
+                    <input
+                        type="number"
+                        placeholder="Family ID"
+                        value={familyId}
+                        onChange={(e) => setFamilyId(e.target.value)}
+                        required
+                    />
+                </>
+            )}
+
+            <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+
+            <input
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 required
-              />
-            </>
-          )}
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-          {error && <div className={styles.error}>{error}</div>}
-          <button type="submit">{isLogin ? "Login" : "Sign Up"}</button>
+            />
+
+            {mode === 'register' && (
+                <input
+                    type="password"
+                    placeholder="Confirm Password"
+                    value={confirm}
+                    onChange={(e) => setConfirm(e.target.value)}
+                    required
+                />
+            )}
+
+            <button type="submit">{mode === 'login' ? 'Login' : 'Create Account'}</button>
+
+            <div style={{ marginTop: '1rem' }}>
+                {mode === 'login' ? (
+                    <span>
+                        Don't have an account?{' '}
+                        <button
+                            type="button"
+                            onClick={() => setMode('register')}
+                            style={{ background: 'none', color: 'blue', cursor: 'pointer', border: 'none', padding: 0 }}
+                        >
+                            Create Account
+                        </button>
+                    </span>
+                ) : (
+                    <span>
+                        Already have an account?{' '}
+                        <button
+                            type="button"
+                            onClick={() => setMode('login')}
+                            style={{ background: 'none', color: 'blue', cursor: 'pointer', border: 'none', padding: 0 }}
+                        >
+                            Login
+                        </button>
+                    </span>
+                )}
+            </div>
         </form>
-        <div className={styles.toggle}>
-          {isLogin ? (
-            <>
-              Don't have an account?{" "}
-              <button type="button" onClick={() => setIsLogin(false)}>
-                Sign Up
-              </button>
-            </>
-          ) : (
-            <>
-              Already have an account?{" "}
-              <button type="button" onClick={() => setIsLogin(true)}>
-                Login
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-    </div>
-  );
+    );
 }

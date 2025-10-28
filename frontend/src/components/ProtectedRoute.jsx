@@ -1,11 +1,18 @@
-import { Navigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { useEffect } from 'react';
+import { useNavigate } from '@tanstack/react-router';
+import { useAuth } from '../context/AuthContext';
 
-export default function ProtectedRoute({ children }) {
-  const { user, loading } = useAuth();
+export function ProtectedRoute({ children }) {
+    const { user, loading } = useAuth();
+    const navigate = useNavigate();
 
-  if (loading) return <div>Loading...</div>;
-  if (!user) return <Navigate to="/" />;
+    useEffect(() => {
+        if (loading === false && user == null) {
+            navigate({ to: '/login' }); // redirect to home if not authenticated
+        }
+    }, [loading, user, navigate]);
 
-  return children;
+    if (loading || !user) return <div>Loading...</div>;
+
+    return <>{children}</>;
 }

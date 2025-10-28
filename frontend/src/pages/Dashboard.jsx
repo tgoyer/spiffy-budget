@@ -1,36 +1,51 @@
-import { useEffect, useState } from "react";
-import { apiFetch } from "../api/api";
-import { useAuth } from "../context/AuthContext";
+import { useEffect, useState } from 'react';
+import { getTransactions, logout } from '../api/api.js';
+import { createRoute, useNavigate } from '@tanstack/react-router';
 
-export default function Dashboard() {
-  const { user, logout } = useAuth();
-  const [transactions, setTransactions] = useState([]);
+import { ProtectedRoute } from '../components/ProtectedRoute.jsx';
+import { useAuth } from '../context/AuthContext.jsx';
 
-  useEffect(() => {
-    async function fetchTransactions() {
-      try {
-        const data = await apiFetch("/transactions");
-        setTransactions(data.transactions || []);
-      } catch (err) {
-        console.error(err);
-      }
-    }
-    fetchTransactions();
-  }, []);
+export const dashboardRoute = (root) =>
+    createRoute({
+        getParentRoute: () => root,
+        path: '/',
+        component: () => (
+            <ProtectedRoute>
+                <Dashboard />
+            </ProtectedRoute>
+        ),
+    });
 
-  return (
-    <div style={{ padding: "2rem" }}>
-      <h1>Welcome, {user.name}</h1>
-      <button onClick={logout}>Logout</button>
-      <h2>Transactions</h2>
-      {transactions.length === 0 && <p>No transactions yet.</p>}
-      <ul>
-        {transactions.map((t) => (
-          <li key={t.id}>
-            {t.category}: ${t.amount} — {t.note}
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
+function Dashboard() {
+    const [transactions, setTransactions] = useState([]);
+    const { setUser } = useAuth();
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        getTransactions().then(setTransactions).catch(console.error);
+    }, []);
+
+    const handleLogout = async () => {
+        try {
+            await logout();
+            setUser(null); // Clear auth context
+            navigate({ to: '/login' }); // Redirect to login page
+        } catch (err) {
+            alert('Logout failed');
+        }
+    };
+
+    return (
+        <div>
+            <h2>Dashboard</h2>
+            <button onClick={handleLogout}>Logout</button>
+            <ul>
+                {transactions?.map((tx) => (
+                    <li key={tx.id}>
+                        {tx.description} - ${tx.amount}
+                    </li>
+                ))}
+            </ul>
+        </div>
+    );
 }
